@@ -3,7 +3,7 @@
 .gitignore
 
 # DOCKER
-.DOCKER
+.docker
 
 # Python
 app/__pycache__/
