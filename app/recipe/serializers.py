@@ -4,13 +4,16 @@ Serializer for recipe API
 
 from rest_framework import serializers
 
-from core.models import Recipe, Tag
+from core.models import Recipe, Tag, Ingredient
 
-# from django.contrib.auth import (
-#     get_user_model,
-#     authenticate,
-# )
-# from django.utils.translation import gettext as _
+class IngredientSerializer(serializers.ModelSerializer):
+    """Serializer for the Ingredient object."""
+
+    class Meta:
+        model = Ingredient
+        fields = ['id', 'name']
+        read_only_fields = ['id']
+
 class TagSerializer(serializers.ModelSerializer):
     """Serializer for the tag object."""
 
@@ -21,6 +24,7 @@ class TagSerializer(serializers.ModelSerializer):
 class RecipeSerializer(serializers.ModelSerializer):
     """Serializer for the recipe object."""
     tags = TagSerializer(many = True, required = False)
+    ingredients = IngredientSerializer(many = True, required = False)
 
     def _get_or_create_tags(self, tags, recipe):
         """Handle getting or creating tas if needed"""
@@ -33,9 +37,24 @@ class RecipeSerializer(serializers.ModelSerializer):
             recipe.tags.add(tag_obj)
         return recipe
 
+    def _get_co_create_ingredients(self, ingredients, recipe):
+        """Handle getting or creating ingredients if needed"""
+        # get the authenticated user
+        auth_user = self.context['request'].user
+        for ingredient in ingredients:
+            ingredient_obj = Ingredient.objects.get_or_create(
+                        user = auth_user,
+                        **ingredient
+                        )
+            recipe.ingredients.add(ingredient_obj)
+        return recipe
+
     class Meta:
         model = Recipe
-        fields = ['id', 'title', 'time_minutes', 'price', 'link', 'tags']
+        fields = [
+            'id', 'title', 'time_minutes', 'price', 'link',
+            'tags', 'ingredients'
+        ]
         read_only_fields = ['id']
 
     def create(self, validated_data):
@@ -44,11 +63,13 @@ class RecipeSerializer(serializers.ModelSerializer):
         # (if not exist the tag var will be [])
         # than we pop the 'tags' out of the validated data.
         tags = validated_data.pop('tags', [])
+        ingredients = validated_data.pop('ingredients', [])
 
-        # create a recipe without the 'tags'
+        # create a recipe without the 'tags' and 'ingredients'
         recipe = Recipe.objects.create(**validated_data)
 
         self._get_or_create_tags(tags=tags, recipe=recipe)
+        self._get_co_create_ingredients(ingredients=ingredients, recipe=recipe)
 
         return recipe
 
