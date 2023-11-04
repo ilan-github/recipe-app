@@ -317,7 +317,7 @@ class PrivateRecipeApiTests(TestCase):
             'ingredients': [{'name': 'Salt'}, {'name': 'Papper'}],
         }
         res = self.client.post(RECIPES_URL, payload, format = 'json')
-        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
         recipes = Recipe.objects.filter(user = self.user)
         self.assertEqual(recipes.count(), 1)
         recipe = recipes[0]
