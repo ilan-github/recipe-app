@@ -1,6 +1,8 @@
 """
 Test Ingredient Apis.
 """
+from decimal import Decimal
+
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.test import TestCase
@@ -8,7 +10,7 @@ from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from core.models import Ingredient
+from core.models import (Ingredient, Recipe)
 from recipe.serializers import IngredientSerializer
 
 INGREDIENT_URL = reverse('recipe:ingredient-list')
@@ -88,15 +90,46 @@ class PrivateIngredientAPITests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Ingredient.objects.filter(id = ingredient.id).exists())
 
+    def test_filter_ingredients_assigned_to_recipe(self):
+        """Test listing ingredients by those assigned to recipes. """
+        int1 = Ingredient.objects.create(user = self.user, name = "Apples")
+        int2 = Ingredient.objects.create(user = self.user, name = "Turkey")
+        recipe = Recipe.objects.create(
+            user = self.user,
+            title = 'Apple Crumble',
+            time_minutes = 5,
+            price = Decimal('4.50'),
+        )
+        recipe.ingredients.add(int1)
+        res = self.client.get(INGREDIENT_URL, {'assigned_only': 1})
 
-    # def test_delete_other_users_tag_error(self):
-    #     """Test deleting a nother user tag"""
-    #     user2 = create_user(email = 'user2@example.com', password='passtest123')
-    #     tag2 = create_tag(user=user2, name = "popotag")
-    #     url = detail_url(tag2.id)
-    #     res = self.client.delete(url)
-    #     self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
-    #     self.assertTrue(Tag.objects.filter(id = tag2.id).exists())
+        s1 = IngredientSerializer(int1)
+        s2 = IngredientSerializer(int2)
+        self.assertIn(s1.data, res.data)
+        self.assertNotIn(s2.data, res.data)
 
+    def test_filter_ingredients_unique(self):
+        """Test filtered ingredients returns a unique list."""
+        ing = Ingredient.objects.create(user = self.user, name ='Eggs')
+        Ingredient.objects.create(user = self.user, name ='Lentils')
+        recipe1 = Recipe.objects.create(
+            title = 'Egges Benedict',
+            time_minutes = 60,
+            price = Decimal('7.00'),
+            user = self.user,
+        )
+
+        recipe2 = Recipe.objects.create(
+            title = 'Herb Egges',
+            time_minutes = 20,
+            price = Decimal('4.00'),
+            user = self.user,
+        )
+        recipe1.ingredients.add(ing)
+        recipe2.ingredients.add(ing)
+
+        res = self.client.get(INGREDIENT_URL, {'assigned_only': 1})
+
+        self.assertEqual(len(res.data), 1)
 
 
