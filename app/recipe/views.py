@@ -59,7 +59,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(ingredients__id__in = ingredient_ids)
 
         return queryset.filter(
-            user = self.request.user,
+            user = self.request.user
         ).order_by('-id').distinct()
 
 
@@ -78,7 +78,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """ Create a new recipe """
         serializer.save(user= self.request.user)
 
-    @action(methods=['POST'], detail=True, url_path='upload_image')
+    @action(methods=['POST'], detail=True, url_path='upload-image')
     def upload_image(self, request, pk=None):
         """Upload an image to recipe"""
         recipe = self.get_object()
@@ -118,7 +118,9 @@ class BaseRecipeAttrViewSet(mixins.DestroyModelMixin,
         queryset = self.queryset
         if assigned_only:
             queryset.filter(recipe__isnull = False)
-        return queryset.filter(user = self.request.user).order_by('-name').distinct()
+
+        return queryset.filter(user = self.request.user
+                               ).order_by('-name').distinct()
 
 class TagViewSet(BaseRecipeAttrViewSet):
 
